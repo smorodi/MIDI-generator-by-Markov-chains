@@ -1,6 +1,7 @@
 import midi_parser
 import fitter_mark
 import data_generator
+import writter_midi
 
 NUMBERS_OF_NOTES = 100
 THE_ORDER_OF_THE_CHAIN = 2
@@ -12,6 +13,8 @@ class Resolver:
         fitter = Resolver.fit_by_files()
         triplets = Resolver.generate_music(fitter)
         Resolver.write_music_to_midi(triplets)
+        file = Resolver.get_midi_structure("e.mid")
+        fitter.print_all_notes(file)
 
     @staticmethod
     def generate_music(fitter):
@@ -29,7 +32,8 @@ class Resolver:
     # дописать генерацию миди-файла
     @staticmethod
     def write_music_to_midi(triplets):
-        pass
+        writter = writter_midi.Writer()
+        writter.write_to_midi_file(triplets)
 
     @staticmethod
     def fit_by_files():
@@ -43,7 +47,7 @@ class Resolver:
     @staticmethod
     def get_file_names():
         file_names = list()
-        file_names.append("first_piano_concerto_in_b_flat_minor.mid")
+        file_names.append("turkish_march.mid")
         return file_names
 
     @staticmethod

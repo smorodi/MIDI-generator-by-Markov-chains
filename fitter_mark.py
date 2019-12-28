@@ -30,13 +30,20 @@ class Fitter:
             count += 1
         return the_highest_note, count
 
+    def print_all_notes(self, file):
+        for i in range(len(file.tracks)):
+            for j in range(min(len(file.tracks[i].events),30)):
+                print(file.tracks[i].events[j])
+
     def fit(self, file):
         for i in range(len(file.tracks)):
             j = 1
             while j < len(file.tracks[i].events):
                 event = file.tracks[i].events[j]
+                print(event)
                 if event.type == "NOTE_ON":
                     delta = file.tracks[i].events[j + 1]
+                    print(delta)
                     if event.pitch is not None:
                         if Fitter.is_a_chord(event, file.tracks[i].events[j+2]):
                             chord_pitch, chord_dimension = Fitter.get_the_highest_note_and_count(file, i, j)
