@@ -1,22 +1,27 @@
-from midiutil.MidiFile import MIDIFile
-class Writer:
-    @staticmethod
-    def write_to_midi_file(triplets):
-        degrees = [60, 62, 64, 65, 67, 69, 71, 72]
-        track = 0
-        channel = 0
-        time = 0
-        tempo = 120
-        volume = 15
-        MyMIDI = MIDIFile(1)
-        MyMIDI.addTrackName(track, time , "Sample Track")
-        MyMIDI.addTempo(track, 120, tempo)
-        for triplet in triplets:
-            pitch = triplet[0]
-            new_time = triplet[1]
-            print(triplet)
-            print("Записываю ноту " +str(pitch) + " и время " + str(time/960))
-            MyMIDI.addNote(track, channel, pitch, time/960, new_time/960, volume)
-            time += new_time
-        with open("e.mid", "wb") as output_file:
-            MyMIDI.writeFile(output_file)
+import mido
+from parser_midi import Type
+from resolver import OUT_PATH
+import os
+
+
+def write_music(res, fitter):
+    mid = mido.MidiFile()
+    track = mido.MidiTrack()
+    mid.tracks.append(track)
+
+    time = 0.0
+    for num in res:
+        decoded_feature = fitter.coder.decode(num)[0]
+        print(decoded_feature)
+        if decoded_feature.type == Type.NOTE:
+            track.append(mido.Message(
+                'note_on', note=decoded_feature.note, velocity=64, time=max(int(time), 32)
+            ))
+            track.append(mido.Message(
+                'note_off', note=decoded_feature.note, velocity=127,
+                time=int(decoded_feature.duration)
+            ))
+            time = 0.0
+        else:
+            time = decoded_feature.duration
+    mid.save(os.path.join(OUT_PATH, "new_song.mid"))

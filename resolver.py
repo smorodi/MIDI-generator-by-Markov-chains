@@ -1,63 +1,47 @@
-import midi_parser
+import numpy as np
 import fitter_mark
-import data_generator
 import writter_midi
+import parser_midi
+import os
+
 
 NUMBERS_OF_NOTES = 100
-THE_ORDER_OF_THE_CHAIN = 2
+THE_ORDER_OF_THE_CHAIN = 3
+INPUT_PATH = os.path.join(os.getcwd(), "tracks for fitting")
+OUT_PATH = os.path.join(os.getcwd(), "generated tracks")
 
 
-class Resolver:
-    @staticmethod
-    def resolve():
-        fitter = Resolver.fit_by_files()
-        triplets = Resolver.generate_music(fitter)
-        Resolver.write_music_to_midi(triplets)
-        file = Resolver.get_midi_structure("e.mid")
-        fitter.print_all_notes(file)
+def resolve():
+    fitter = fit_by_files()
+    features = fitter.encode_features(THE_ORDER_OF_THE_CHAIN)
+    model = fitter_mark.ChainModel()
+    model.fit(features)
+    res = generate_music(fitter)
+    write_music_to_midi(res, fitter)
 
-    @staticmethod
-    def generate_music(fitter):
-        generator = data_generator.Generator(fitter)
-        triplets = []
-        current_notes = generator.get_initial_triplet()
-        triplets.append(current_notes[0])
-        triplets.append(current_notes[1])
-        for i in range(NUMBERS_OF_NOTES):
-            new_triplet = generator.get_new_note_by_markov_chain(current_notes)
-            current_notes = (current_notes[1], new_triplet)
-            triplets.append(new_triplet)
-        return triplets
 
-    # дописать генерацию миди-файла
-    @staticmethod
-    def write_music_to_midi(triplets):
-        writter = writter_midi.Writer()
-        writter.write_to_midi_file(triplets)
+def generate_music(fitter):
+    features = fitter.encode_features(2)
+    model = fitter_mark.ChainModel()
+    model.fit(features)
+    res = model.predict(200, np.random.choice(model.probabilities.nonzero()[0], 1)[0])
+    return res
 
-    @staticmethod
-    def fit_by_files():
-        fitter = fitter_mark.Fitter()
-        for file_name in Resolver.get_file_names():
-            file = Resolver.get_midi_structure(file_name)
-            fitter.fit(file)
-        return fitter
 
-    # дописать парсинг файла с названиями и обращение к текущей директории
-    @staticmethod
-    def get_file_names():
-        file_names = list()
-        file_names.append("turkish_march.mid")
-        return file_names
+def write_music_to_midi(res, fitter):
+    writter_midi.write_music(res, fitter)
 
-    @staticmethod
-    def get_midi_structure(file_name):
-        file = midi_parser.MidiFile()
-        file.open(file_name)
-        file.read()
-        file.close()
-        return file
+
+def fit_by_files():
+    fitter = parser_midi.FeatureExtractor()
+    for file_name in get_file_names():
+        fitter.parse(os.path.join(INPUT_PATH, file_name))
+    return fitter
+
+
+def get_file_names():
+    return os.listdir(INPUT_PATH)
 
 
 if __name__ == "__main__":
-    Resolver.resolve()
+    resolve()
