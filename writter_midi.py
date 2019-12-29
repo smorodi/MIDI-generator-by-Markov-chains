@@ -12,7 +12,6 @@ def write_music(res, fitter):
     time = 0.0
     for num in res:
         decoded_feature = fitter.coder.decode(num)[0]
-        print(decoded_feature)
         if decoded_feature.type == Type.NOTE:
             track.append(mido.Message(
                 'note_on', note=decoded_feature.note, velocity=64, time=max(int(time), 32)

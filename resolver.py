@@ -5,7 +5,7 @@ import parser_midi
 import os
 
 
-NUMBERS_OF_NOTES = 100
+NUMBERS_OF_NOTES = 200
 THE_ORDER_OF_THE_CHAIN = 3
 INPUT_PATH = os.path.join(os.getcwd(), "tracks for fitting")
 OUT_PATH = os.path.join(os.getcwd(), "generated tracks")
@@ -24,7 +24,7 @@ def generate_music(fitter):
     features = fitter.encode_features(2)
     model = fitter_mark.ChainModel()
     model.fit(features)
-    res = model.predict(200, np.random.choice(model.probabilities.nonzero()[0], 1)[0])
+    res = model.predict(NUMBERS_OF_NOTES, np.random.choice(model.probabilities.nonzero()[0], 1)[0])
     return res
 
 
