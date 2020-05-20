@@ -22,5 +22,5 @@ def write_music(res, fitter):
             ))
             time = 0.0
         else:
-            time = decoded_feature.duration
+            time = min(decoded_feature.duration, 960)
     mid.save(os.path.join(OUT_PATH, "new_song.mid"))

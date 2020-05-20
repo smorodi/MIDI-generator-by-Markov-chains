@@ -2,7 +2,6 @@ import mido
 from enum import Enum
 from collections import namedtuple
 
-
 Feature = namedtuple('Feature', ('type', 'duration', 'note'))
 
 
@@ -53,13 +52,24 @@ class FeatureExtractor:
                     all_messages.append(msg)
 
         current_notes = {}
+        chords = {}
+        highest_notes = {}
         time = 0.0
         for msg in all_messages:
             if msg.type == "note_on":
+                if msg.time in highest_notes.keys():
+                    if highest_notes[msg.time].note < msg.note:
+                        highest_notes[msg.time] = msg
+                else:
+                    highest_notes[msg.time] = msg
                 if msg.time != time and len(current_notes) == 0:
                     self.features.append(Feature(
                         type=Type.PAUSE, duration=msg.time - time, note=None
                     ))
+                if msg.time in chords.keys():
+                    chords[msg.time].append(msg)
+                else:
+                    chords[msg.time] = [msg]
                 if msg.note not in current_notes:
                     current_notes[msg.note] = msg
                 time = msg.time
@@ -72,8 +82,7 @@ class FeatureExtractor:
                         type=Type.NOTE, note=msg.note,
                         duration=msg.time - current_notes[max_note].time))
                 current_notes.pop(msg.note)
-            else:
-                pass
+        return highest_notes, chords
 
     def encode_features(self, order):
         self.coder = FeaturesToInt()
