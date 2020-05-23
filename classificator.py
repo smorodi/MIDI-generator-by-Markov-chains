@@ -2,7 +2,7 @@ from skmultilearn.problem_transform import BinaryRelevance
 from sklearn.naive_bayes import GaussianNB
 
 
-class BinaryPitchClassificator:
+class BinaryPitchClassifier:
     def __init__(self, number):
         self.classifier = BinaryRelevance(GaussianNB())
         self.pitch_number = number

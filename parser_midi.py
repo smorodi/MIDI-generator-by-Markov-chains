@@ -44,13 +44,24 @@ class FeatureExtractor:
         self.mid = mido.MidiFile(filename)
         time = 0.0
         all_messages = []
+        programs_in_channels = {}
+        pitch_count = 0
         for i, track in enumerate(self.mid.tracks):
             for msg in track:
                 time += msg.time
-                if msg.type in ["note_on", "note_off"]:
+                if msg.type == "program_change":
+                    programs_in_channels[msg.channel] = (msg.program, 0)
+                elif msg.type in ["note_on", "note_off"]:
+                    if msg.type == "note_on":
+                        pitch_count += 1
+                        count = programs_in_channels[msg.channel][1]
+                        program = programs_in_channels[msg.channel][0]
+                        programs_in_channels[msg.channel] = (program, count + 1)
                     msg.time = time
                     all_messages.append(msg)
-
+        for i in programs_in_channels.keys():
+            program = programs_in_channels[i][0]
+            programs_in_channels[i] = (program, programs_in_channels[i][1] / pitch_count)
         current_notes = {}
         chords = {}
         highest_notes = {}
@@ -82,7 +93,7 @@ class FeatureExtractor:
                         type=Type.NOTE, note=msg.note,
                         duration=msg.time - current_notes[max_note].time))
                 current_notes.pop(msg.note)
-        return highest_notes, chords
+        return highest_notes, chords, programs_in_channels
 
     def encode_features(self, order):
         self.coder = FeaturesToInt()

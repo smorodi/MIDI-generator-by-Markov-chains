@@ -1,23 +1,29 @@
-import numpy as np
+import logging
+
+from config import NUMBERS_OF_NOTES, THE_ORDER_OF_THE_CHAIN, INPUT_PATH
 import fitter_pitches
-import writter_midi
-import parser_midi
 import fitter_chodrs
 import os
+import numpy as np
+import parser_midi
+import writer_midi
 
-COUNT_NOTES = 88
-NUMBERS_OF_NOTES = 500
-THE_ORDER_OF_THE_CHAIN = 3
-INPUT_PATH = os.path.join(os.getcwd(), "tracks for fitting")
-OUT_PATH = os.path.join(os.getcwd(), "generated tracks")
+FORMAT = '%(message)s'
+logging.basicConfig(format=FORMAT, level = logging.DEBUG)
+d = {'clientip': '192.168.0.1', 'user': 'fbloggs'}
+logger = logging.getLogger('midi_mark_logger')
 
 
 def resolve():
-    pitches_extractor, chords_fitter  = fit_by_files()
+    logger.info('Start process')
+    pitches_extractor, chords_fitter, programs_in_channels = fit_by_files()
+    logger.info('Generating base')
     res = generate_music(pitches_extractor)
+    logger.info('Generating chords')
     x_test = fitter_chodrs.FitterChords.process_test(pitches_extractor, res)
-    y_test = chords_fitter.predict(x_test)
-    write_music_to_midi(res, pitches_extractor)
+    chords = chords_fitter.predict(x_test)
+    logger.info('Writing to midi')
+    write_music_to_midi(res, pitches_extractor, chords, programs_in_channels)
 
 
 def generate_music(fitter):
@@ -28,18 +34,31 @@ def generate_music(fitter):
     return res
 
 
-def write_music_to_midi(res, fitter):
-    writter_midi.write_music(res, fitter)
+def write_music_to_midi(res, fitter, chords, programs_in_channels):
+    writer = writer_midi.WriterMidi(fitter, res, chords, programs_in_channels)
+    writer.write_music()
 
 
-def fit_by_files(is_chords=False):
+def fit_by_files():
     pitches_extractor = parser_midi.FeatureExtractor()
     chords_fitter = fitter_chodrs.FitterChords()
-    for file_name in get_file_names():
-        highest_notes, chords = pitches_extractor.parse(os.path.join(INPUT_PATH, file_name))
-        x_train, y_train = fitter_chodrs.FitterChords.process_train(highest_notes, chords)
-    chords_fitter.create_and_fit_classifiers(x_train, y_train)
-    return pitches_extractor, chords_fitter
+    file_names = get_file_names()
+    logger.info('Parsing file: %s', file_names[0])
+    highest_notes, chords, programs_in_channels = pitches_extractor.parse(os.path.join(INPUT_PATH, file_names[0]))
+    x, y = fitter_chodrs.FitterChords.process_train(highest_notes, chords)
+    for i in range(max(1, len(file_names) - 1), len(file_names)):
+        logger.info('Parsing file: %s', file_names[i])
+        highest_notes, chords, programs_in_channels = pitches_extractor.parse(os.path.join(INPUT_PATH, file_names[i]))
+        current_x, current_y = fitter_chodrs.FitterChords.process_train(highest_notes, chords)
+        x = np.vstack((x, current_x))
+        y = np.hstack((y, current_y))
+    logger.info('Fitting')
+    highest_notes, chords, programs_in_channels = pitches_extractor.parse(os.path.join(INPUT_PATH, file_names[-1]))
+    current_x, current_y = fitter_chodrs.FitterChords.process_train(highest_notes, chords)
+    x = np.vstack((x, current_x))
+    y = np.hstack((y, current_y))
+    chords_fitter.create_and_fit_classifiers(x, y)
+    return pitches_extractor, chords_fitter, programs_in_channels
 
 
 def get_file_names():
